@@ -4,6 +4,8 @@
 
 The intended deployment is one Linux service running the Python application, Google Chrome, and an Xvfb virtual display. Chrome must run in headed mode because the verified headless session did not load usable Aviasales results. Start with a VPS that has at least 1 GB RAM, then measure peak use before reducing resources.
 
+During local Windows testing, Task Scheduler starts `scripts/run_local.ps1` at user logon. The script restarts the process after failure and writes to `logs/bot.log`. This local mode works only while the computer is on and the user is signed in.
+
 ## Required secrets
 
 - `TELEGRAM_BOT_TOKEN`: active bot token stored outside Git.
@@ -40,4 +42,3 @@ This is expected. A verified visible price is still not a reservation. Messages 
 ### Database corruption or disk loss
 
 The bot can rebuild current state, but historical comparisons and deduplication are lost. Back up the SQLite file after clean checkpoints if history becomes valuable.
-

@@ -128,7 +128,14 @@ async def _scheduled_checks(
 ) -> None:
     while True:
         try:
+            logger.info("Starting scheduled flight-price check")
             result = await cycle.run()
+            logger.info(
+                "Scheduled check completed: live_status=%s live_offers=%d saved=%d",
+                result.live_status,
+                result.live_offers_found,
+                result.live_offers_saved,
+            )
             await _send_offer_alerts(
                 bot=bot,
                 settings=settings,
@@ -247,4 +254,3 @@ async def run_bot() -> None:
             with suppress(asyncio.CancelledError):
                 await schedule_task
         await bot.session.close()
-

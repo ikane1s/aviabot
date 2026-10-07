@@ -30,6 +30,8 @@ python -m ruff check .
 python -m flight_price_bot
 ```
 
+For a persistent local Windows run, use `scripts/run_local.ps1`. It restarts the bot after an unexpected exit and writes runtime output to ignored `logs/bot.log`. The installed Task Scheduler entry starts this script when the user signs in.
+
 ## Implementation order
 
 1. Domain models and date-pair generator.
@@ -47,4 +49,3 @@ Items 1–8 are implemented. The Travelpayouts adapter is unit tested but awaits
 ## Live-site development rule
 
 Keep selectors and page interpretation inside the Aviasales provider. Save sanitized HTML fixtures only when allowed and useful; never save cookies, tokens, or personal session data. A selector test is not proof of production behavior, so always run a controlled live smoke check before deployment.
-
