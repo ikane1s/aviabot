@@ -59,6 +59,10 @@ SQLite runs in WAL mode. Proposed tables:
 
 Uses long polling, which avoids a public HTTPS endpoint. The notifier formats messages and uses idempotency keys. Command handlers validate the configured chat ID.
 
+On the production host, Telegram traffic uses a loopback SOCKS5 endpoint backed by a
+restricted SSH tunnel to the foreign gateway. Browser traffic remains direct. This keeps
+the gateway isolated from the public Internet and does not change Aviasales behavior.
+
 ## Search strategy
 
 Running every date and passenger combination through a browser would be wasteful. Each cycle uses two stages:
@@ -83,4 +87,3 @@ The 14 approved combinations are covered in about five cycles. With the current 
 - Browser profile data is private operational state and stays outside Git.
 - Logs must redact tokens, query headers, cookies, and sensitive URLs.
 - Telegram commands are limited to the configured chat.
-

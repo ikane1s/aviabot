@@ -36,3 +36,9 @@ Headless browser runs received Yandex SmartCaptcha, while visible installed Chro
 
 Check three of the 14 valid date pairs per two-hour cycle. Query one adult first and repeat dates at or below the 35,000 RUB threshold for four adults. Aviasales displays a combined four-person total, so normalize it to a per-person price before comparison and notification.
 
+## 2026-10-08 — Telegram through a restricted SSH tunnel
+
+The Russian production VPS cannot reliably reach the Telegram Bot API. Keep the bot and
+visible Chrome on that VPS, but send only Telegram traffic through a SOCKS5 endpoint on
+`127.0.0.1:1080`. A systemd-managed SSH tunnel connects to a dedicated, key-only account
+on the foreign gateway. Aviasales traffic remains direct.

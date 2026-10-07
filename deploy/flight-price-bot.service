@@ -1,7 +1,8 @@
 [Unit]
 Description=Telegram Flight Price Bot
 Wants=network-online.target flight-price-bot-xvfb.service
-After=network-online.target flight-price-bot-xvfb.service
+Requires=flight-price-bot-tunnel.service
+After=network-online.target flight-price-bot-xvfb.service flight-price-bot-tunnel.service
 
 [Service]
 Type=simple

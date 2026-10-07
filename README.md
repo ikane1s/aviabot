@@ -8,7 +8,26 @@ The preferred trip length is five days, with an accepted range of four to seven 
 
 ## Current status
 
-The Telegram bot is connected to the target group and runs locally. SQLite persistence, two-hour scheduling, commands, daily summaries, Travelpayouts adapters, round-trip and separate one-way comparison, notification deduplication, and live Aviasales extraction are implemented. A visible Chrome session with a persistent profile loads current result cards; the bot rotates through three date pairs per cycle and verifies attractive dates for four adults. Travelpayouts cannot return cached observations until its API token is configured.
+SQLite persistence, two-hour scheduling, commands, daily summaries, Travelpayouts adapters, round-trip and separate one-way comparison, notification deduplication, and live Aviasales extraction are implemented. A visible Chrome session with a persistent profile loads current result cards; the bot rotates through three date pairs per cycle and verifies attractive dates for four adults. Travelpayouts discovery remains optional and requires an API token.
+
+## Quick start
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+Copy-Item .env.example .env
+```
+
+Fill the local `.env`, then run:
+
+```powershell
+python -m flight_price_bot
+```
+
+The browser verifier uses installed Google Chrome in visible mode. Linux deployment
+files and the optional SSH gateway configuration are documented in
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ## Proposed stack
 

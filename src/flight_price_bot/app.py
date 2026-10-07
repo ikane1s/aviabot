@@ -6,6 +6,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot, Dispatcher, Router
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.filters import Command
 from aiogram.types import BotCommand, Message
 
@@ -223,16 +225,28 @@ async def run_bot() -> None:
     store = SQLiteStore(settings.database_path)
     await store.initialize()
     cycle = SearchCycle(settings, store)
-    bot = Bot(token=settings.telegram_bot_token.get_secret_value())
-    await bot.set_my_commands(
-        [
-            BotCommand(command="status", description="Состояние мониторинга"),
-            BotCommand(command="best", description="Лучшие найденные варианты"),
-            BotCommand(command="check", description="Запустить проверку"),
-            BotCommand(command="setup", description="Показать ID группы при настройке"),
-            BotCommand(command="help", description="Как работает бот"),
-        ]
+    proxy_url = (
+        settings.telegram_proxy_url.get_secret_value()
+        if settings.telegram_proxy_url is not None
+        else None
     )
+    session = AiohttpSession(proxy=proxy_url) if proxy_url else AiohttpSession()
+    bot = Bot(token=settings.telegram_bot_token.get_secret_value(), session=session)
+    try:
+        await bot.set_my_commands(
+            [
+                BotCommand(command="status", description="Состояние мониторинга"),
+                BotCommand(command="best", description="Лучшие найденные варианты"),
+                BotCommand(command="check", description="Запустить проверку"),
+                BotCommand(command="setup", description="Показать ID группы при настройке"),
+                BotCommand(command="help", description="Как работает бот"),
+            ]
+        )
+    except TelegramNetworkError:
+        logger.warning(
+            "Telegram command registration failed; polling will retry network access",
+            exc_info=True,
+        )
     dispatcher = Dispatcher()
     dispatcher.include_router(build_router(settings, store, cycle))
     schedule_task = None

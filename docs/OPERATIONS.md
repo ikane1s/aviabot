@@ -6,12 +6,19 @@ The intended deployment is one Linux service running the Python application, Goo
 
 During local Windows testing, Task Scheduler starts `scripts/run_local.ps1` at user logon. The script restarts the process after failure and writes to `logs/bot.log`. This local mode works only while the computer is on and the user is signed in.
 
-On Linux, `deploy/flight-price-bot-xvfb.service` provides display `:99` without opening an X11 network listener. `deploy/flight-price-bot.service` runs the application as the unprivileged `flightbot` user and restarts it after failure. Secrets are read from `/etc/flight-price-bot.env`.
+On Linux, `deploy/flight-price-bot-xvfb.service` provides display `:99` without opening an X11 network listener. `deploy/flight-price-bot-tunnel.service` provides a loopback-only SOCKS5 endpoint for Telegram through the foreign gateway. `deploy/flight-price-bot.service` runs the application as the unprivileged `flightbot` user and restarts it after failure. Secrets are read from `/etc/flight-price-bot.env`.
+
+Copy `deploy/flight-price-bot-tunnel.env.example` to
+`/etc/flight-price-bot-tunnel.env` and replace the example destination with the
+dedicated SSH user and gateway hostname. Keep the real gateway address in the host
+configuration rather than Git. The SSH private key and pinned `known_hosts` entry live
+under `/var/lib/flight-price-bot/.ssh`.
 
 ## Required secrets
 
 - `TELEGRAM_BOT_TOKEN`: active bot token stored outside Git.
 - `TELEGRAM_TARGET_CHAT_ID`: the approved group.
+- `TELEGRAM_PROXY_URL`: production value `socks5://127.0.0.1:1080`; omit locally when Telegram is directly reachable.
 - `TRAVELPAYOUTS_API_TOKEN`: official Data API token.
 
 Keep secrets in a root-readable service environment file or another host secret store. Never put them in Git or command output shared in chat.

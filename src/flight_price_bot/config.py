@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     telegram_bot_token: SecretStr
     telegram_target_chat_id: int
+    telegram_proxy_url: SecretStr | None = None
     travelpayouts_api_token: SecretStr | None = None
 
     app_timezone: str = "Asia/Novosibirsk"
@@ -55,4 +56,3 @@ class Settings(BaseSettings):
         if len(normalized) != 3 or not normalized.isalpha():
             raise ValueError("airport code must contain three Latin letters")
         return normalized
-

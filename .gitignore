@@ -11,4 +11,5 @@ data/*.db
 data/*.db-*
 data/browser-profile/
 logs/
-artifacts/
+artifacts/*
+!artifacts/.gitkeep
