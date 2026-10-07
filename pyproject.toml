@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flight-price-bot"
+version = "0.1.0"
+description = "Private Telegram bot for monitoring OVB-EVN flight prices"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.13,<4",
+    "aiosqlite>=0.20,<1",
+    "httpx>=0.27,<1",
+    "playwright>=1.48,<2",
+    "pydantic-settings>=2.6,<3",
+    "tzdata>=2026.1; platform_system == 'Windows'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-asyncio>=0.25,<2",
+    "pytest>=8,<10",
+    "ruff>=0.8,<1",
+]
+
+[project.scripts]
+flight-price-bot = "flight_price_bot.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--basetemp=.pytest-tmp"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
