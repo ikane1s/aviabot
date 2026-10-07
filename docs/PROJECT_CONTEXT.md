@@ -13,7 +13,7 @@ Help four friends find inexpensive flights from Novosibirsk to Yerevan for a con
 - Concert: 19 December 2026.
 - Initial departure window: 15–18 December 2026.
 - Initial return window: 20–23 December 2026.
-- Preferred stay: about five days; approximately 3–7 nights is acceptable.
+- Preferred stay: five days; 4–7 days is acceptable.
 - Travelers: four adults.
 - Each traveler purchases separately.
 - Prefer the same itinerary for all four.

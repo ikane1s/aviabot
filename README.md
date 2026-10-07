@@ -4,6 +4,8 @@ Private Telegram bot for monitoring flights from Novosibirsk (`OVB`) to Yerevan 
 
 The bot searches round trips and separate one-way tickets, compares direct and reasonable one-stop options, checks availability for one and four adults, and posts useful findings to a Telegram group. The target price is as low as possible; 35,000 RUB per person round trip is the hard notification ceiling.
 
+The preferred trip length is five days, with an accepted range of four to seven days.
+
 ## Current status
 
 The Telegram bot is connected to the target group and runs locally. SQLite persistence, two-hour scheduling, commands, daily summaries, Travelpayouts adapters, round-trip and separate one-way comparison, notification deduplication, and live Aviasales extraction are implemented. A visible Chrome session with a persistent profile loads current result cards; the bot rotates through three date pairs per cycle and verifies attractive dates for four adults. Travelpayouts cannot return cached observations until its API token is configured.

@@ -62,12 +62,22 @@ class SearchCycle:
             )
 
     def date_pairs(self) -> list[DatePair]:
-        return generate_date_pairs(
+        pairs = generate_date_pairs(
             departure_start=self.settings.departure_start,
             departure_end=self.settings.departure_end,
             return_start=self.settings.return_start,
             return_end=self.settings.return_end,
             concert=self.settings.concert_date,
+            min_nights=self.settings.minimum_trip_days,
+            max_nights=self.settings.maximum_trip_days,
+        )
+        return sorted(
+            pairs,
+            key=lambda pair: (
+                abs(pair.nights - self.settings.preferred_trip_days),
+                pair.departure,
+                pair.return_date,
+            ),
         )
 
     async def _run_cached_discovery(self) -> tuple[int, int, str]:

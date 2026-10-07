@@ -13,6 +13,7 @@ For every valid departure/return pair, the system considers:
 5. Itineraries with one connection in either direction.
 
 The date generator must ensure that the traveler is in Yerevan on 19 December 2026 and that the return occurs after the concert.
+Trips lasting five days are checked first. Four to seven days is the accepted range; shorter and longer combinations are excluded.
 
 ## Convenience rules
 
