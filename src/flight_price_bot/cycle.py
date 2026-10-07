@@ -183,13 +183,12 @@ class SearchCycle:
         )
         try:
             observations: list[SearchPageObservation] = []
+            failures: list[str] = []
             saved = 0
             for index, pair in enumerate(selected_pairs):
-                observation = await probe.inspect(
-                    origin=self.settings.origin,
-                    destination=self.settings.destination,
-                    departure=pair.departure,
-                    return_date=pair.return_date,
+                observation, error_name = await self._inspect_with_retry(
+                    probe=probe,
+                    pair=pair,
                     adults=1,
                     screenshot_path=(
                         Path("artifacts/latest-live-check.png")
@@ -197,6 +196,13 @@ class SearchCycle:
                         else None
                     ),
                 )
+                if error_name:
+                    failures.append(
+                        f"{pair.departure:%Y-%m-%d}/{pair.return_date:%Y-%m-%d}:"
+                        f"{error_name}"
+                    )
+                if observation is None:
+                    continue
                 observations.append(observation)
                 for offer in observation.offers:
                     saved += int(await self.store.save_offer(offer))
@@ -206,16 +212,20 @@ class SearchCycle:
                     default=None,
                 )
                 if cheapest is not None and cheapest <= self.settings.maximum_price_rub:
-                    group_observation = await probe.inspect(
-                        origin=self.settings.origin,
-                        destination=self.settings.destination,
-                        departure=pair.departure,
-                        return_date=pair.return_date,
+                    group_observation, group_error = await self._inspect_with_retry(
+                        probe=probe,
+                        pair=pair,
                         adults=self.settings.travelers,
                     )
-                    observations.append(group_observation)
-                    for offer in group_observation.offers:
-                        saved += int(await self.store.save_offer(offer))
+                    if group_error:
+                        failures.append(
+                            f"{pair.departure:%Y-%m-%d}/{pair.return_date:%Y-%m-%d}:"
+                            f"group:{group_error}"
+                        )
+                    if group_observation is not None:
+                        observations.append(group_observation)
+                        for offer in group_observation.offers:
+                            saved += int(await self.store.save_offer(offer))
 
                 if observation.status is SearchPageStatus.CHALLENGE:
                     break
@@ -224,6 +234,22 @@ class SearchCycle:
                 "browser_pair_cursor",
                 str((cursor + len(selected_pairs)) % len(pairs)),
             )
+            if not observations:
+                detail = "; ".join(failures) or "no observations"
+                await self.store.record_search_run(
+                    source="aviasales_browser",
+                    status="error",
+                    started_at=started_at,
+                    detail=detail[:500],
+                )
+                return SearchPageObservation(
+                    status=SearchPageStatus.NAVIGATION_ERROR,
+                    requested_url="",
+                    final_url="",
+                    title=detail[:100],
+                    passenger_label_found=False,
+                    screenshot_path=None,
+                ), saved
             ready = [
                 observation
                 for observation in observations
@@ -268,7 +294,42 @@ class SearchCycle:
             source="aviasales_browser",
             status=observation.status.value,
             started_at=started_at,
-            detail=f"{len(observation.offers)} offers; {observation.final_url}",
+            detail=(
+                f"{len(observation.offers)} offers; failed={len(failures)}; "
+                f"{'; '.join(failures)}; {observation.final_url}"
+            )[:500],
         )
         return observation, saved
+
+    async def _inspect_with_retry(
+        self,
+        *,
+        probe: AviasalesPageProbe,
+        pair: DatePair,
+        adults: int,
+        screenshot_path: Path | None = None,
+    ) -> tuple[SearchPageObservation | None, str | None]:
+        last_error = "navigation_error"
+        for attempt in range(2):
+            try:
+                observation = await probe.inspect(
+                    origin=self.settings.origin,
+                    destination=self.settings.destination,
+                    departure=pair.departure,
+                    return_date=pair.return_date,
+                    adults=adults,
+                    screenshot_path=screenshot_path,
+                )
+            except Exception as error:  # isolate one route from the rest of the cycle
+                last_error = type(error).__name__
+            else:
+                if observation.status not in {
+                    SearchPageStatus.NAVIGATION_ERROR,
+                    SearchPageStatus.EMPTY_OR_LOADING,
+                }:
+                    return observation, None
+                last_error = observation.status.value
+            if attempt == 0:
+                await asyncio.sleep(3)
+        return None, last_error
 

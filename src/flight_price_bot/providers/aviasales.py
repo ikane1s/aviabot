@@ -266,80 +266,84 @@ class AviasalesPageProbe:
                 timezone_id="Asia/Novosibirsk",
                 viewport={"width": 1440, "height": 1000},
             )
-            page = context.pages[0] if context.pages else await context.new_page()
-            navigation_failed = False
             try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-                with suppress(PlaywrightTimeoutError):
-                    await page.locator(
-                        '[data-test-id^="bdui-ticket-preview-normal-"]'
-                    ).first.wait_for(timeout=35_000)
-                    await page.wait_for_timeout(5_000)
-            except PlaywrightTimeoutError:
-                navigation_failed = True
-
-            body_text = await page.locator("body").inner_text(timeout=10_000)
-            frame_urls = " ".join(frame.url.lower() for frame in page.frames)
-            challenge = any(marker in frame_urls for marker in CHALLENGE_MARKERS)
-            passenger_labels = (
-                ("1 пассажир",)
-                if adults == 1
-                else (f"{adults} пассажира", f"{adults} пассажиров")
-            )
-            passenger_label_found = any(label in body_text for label in passenger_labels)
-            raw_cards = await page.locator(
-                '[data-test-id^="bdui-ticket-preview-normal-"]'
-            ).evaluate_all(
-                """
-                cards => cards.map(card => ({
-                  id: card.getAttribute('data-test-id') || '',
-                  text: (card.innerText || '').trim(),
-                  images: Array.from(card.querySelectorAll('img')).map(image => image.src)
-                }))
-                """
-            )
-            if screenshot_path:
-                await page.screenshot(path=str(screenshot_path), full_page=True)
-
-            has_visible_prices = bool(raw_cards)
-            if challenge and not has_visible_prices:
-                status = SearchPageStatus.CHALLENGE
-            elif has_visible_prices:
-                status = SearchPageStatus.READY
-            elif navigation_failed:
-                status = SearchPageStatus.NAVIGATION_ERROR
-            else:
-                status = SearchPageStatus.EMPTY_OR_LOADING
-
-            observed_at = datetime.now(UTC)
-            offers: list[Offer] = []
-            for card in raw_cards:
+                page = context.pages[0] if context.pages else await context.new_page()
+                navigation_failed = False
                 try:
-                    offers.append(
-                        parse_ticket_card(
-                            text=card["text"],
-                            card_id=card["id"],
-                            image_urls=card["images"],
-                            origin=origin,
-                            destination=destination,
-                            departure=departure,
-                            return_date=return_date,
-                            adults=adults,
-                            result_url=page.url,
-                            observed_at=observed_at,
-                        )
-                    )
-                except (StopIteration, ValueError):
-                    continue
+                    await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                    with suppress(PlaywrightTimeoutError):
+                        await page.locator(
+                            '[data-test-id^="bdui-ticket-preview-normal-"]'
+                        ).first.wait_for(timeout=35_000)
+                        await page.wait_for_timeout(5_000)
+                except PlaywrightTimeoutError:
+                    navigation_failed = True
 
-            observation = SearchPageObservation(
-                status=status,
-                requested_url=url,
-                final_url=page.url,
-                title=await page.title(),
-                passenger_label_found=passenger_label_found,
-                screenshot_path=screenshot_path,
-                offers=tuple(offers),
-            )
-            await context.close()
-            return observation
+                body_text = await page.locator("body").inner_text(timeout=10_000)
+                frame_urls = " ".join(frame.url.lower() for frame in page.frames)
+                challenge = any(marker in frame_urls for marker in CHALLENGE_MARKERS)
+                passenger_labels = (
+                    ("1 пассажир",)
+                    if adults == 1
+                    else (f"{adults} пассажира", f"{adults} пассажиров")
+                )
+                passenger_label_found = any(
+                    label in body_text for label in passenger_labels
+                )
+                raw_cards = await page.locator(
+                    '[data-test-id^="bdui-ticket-preview-normal-"]'
+                ).evaluate_all(
+                    """
+                    cards => cards.map(card => ({
+                      id: card.getAttribute('data-test-id') || '',
+                      text: (card.innerText || '').trim(),
+                      images: Array.from(card.querySelectorAll('img')).map(image => image.src)
+                    }))
+                    """
+                )
+                if screenshot_path:
+                    await page.screenshot(path=str(screenshot_path), full_page=True)
+
+                has_visible_prices = bool(raw_cards)
+                if challenge and not has_visible_prices:
+                    status = SearchPageStatus.CHALLENGE
+                elif has_visible_prices:
+                    status = SearchPageStatus.READY
+                elif navigation_failed:
+                    status = SearchPageStatus.NAVIGATION_ERROR
+                else:
+                    status = SearchPageStatus.EMPTY_OR_LOADING
+
+                observed_at = datetime.now(UTC)
+                offers: list[Offer] = []
+                for card in raw_cards:
+                    try:
+                        offers.append(
+                            parse_ticket_card(
+                                text=card["text"],
+                                card_id=card["id"],
+                                image_urls=card["images"],
+                                origin=origin,
+                                destination=destination,
+                                departure=departure,
+                                return_date=return_date,
+                                adults=adults,
+                                result_url=page.url,
+                                observed_at=observed_at,
+                            )
+                        )
+                    except (StopIteration, ValueError):
+                        continue
+
+                return SearchPageObservation(
+                    status=status,
+                    requested_url=url,
+                    final_url=page.url,
+                    title=await page.title(),
+                    passenger_label_found=passenger_label_found,
+                    screenshot_path=screenshot_path,
+                    offers=tuple(offers),
+                )
+            finally:
+                with suppress(Exception):
+                    await context.close()
