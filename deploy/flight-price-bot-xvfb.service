@@ -1,0 +1,15 @@
+[Unit]
+Description=Virtual display for Flight Price Bot
+After=network.target
+
+[Service]
+Type=simple
+User=flightbot
+Group=flightbot
+Environment=HOME=/var/lib/flight-price-bot
+ExecStart=/usr/bin/Xvfb :99 -screen 0 1440x1000x24 -nolisten tcp -ac
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

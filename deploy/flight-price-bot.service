@@ -1,0 +1,27 @@
+[Unit]
+Description=Telegram Flight Price Bot
+Wants=network-online.target flight-price-bot-xvfb.service
+After=network-online.target flight-price-bot-xvfb.service
+
+[Service]
+Type=simple
+User=flightbot
+Group=flightbot
+WorkingDirectory=/opt/flight-price-bot
+EnvironmentFile=/etc/flight-price-bot.env
+Environment=DISPLAY=:99
+Environment=HOME=/var/lib/flight-price-bot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/flight-price-bot/.venv/bin/python -m flight_price_bot
+Restart=always
+RestartSec=15
+TimeoutStopSec=30
+KillMode=mixed
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/flight-price-bot/data /opt/flight-price-bot/artifacts /var/lib/flight-price-bot
+
+[Install]
+WantedBy=multi-user.target

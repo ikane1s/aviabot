@@ -6,6 +6,8 @@ The intended deployment is one Linux service running the Python application, Goo
 
 During local Windows testing, Task Scheduler starts `scripts/run_local.ps1` at user logon. The script restarts the process after failure and writes to `logs/bot.log`. This local mode works only while the computer is on and the user is signed in.
 
+On Linux, `deploy/flight-price-bot-xvfb.service` provides display `:99` without opening an X11 network listener. `deploy/flight-price-bot.service` runs the application as the unprivileged `flightbot` user and restarts it after failure. Secrets are read from `/etc/flight-price-bot.env`.
+
 ## Required secrets
 
 - `TELEGRAM_BOT_TOKEN`: active bot token stored outside Git.

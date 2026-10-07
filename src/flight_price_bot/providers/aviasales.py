@@ -262,6 +262,12 @@ class AviasalesPageProbe:
                 str(self.profile_dir),
                 channel=self.channel,
                 headless=self.headless,
+                args=[
+                    "--disable-dev-shm-usage",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-background-networking",
+                ],
                 locale="ru-RU",
                 timezone_id="Asia/Novosibirsk",
                 viewport={"width": 1440, "height": 1000},
