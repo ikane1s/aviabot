@@ -26,6 +26,14 @@ The date generator must ensure that the traveler is in Yerevan on 19 December 20
 
 ## Alerts
 
+The message tone follows the price:
+
+- up to 20,000 RUB: maximum urgency, alarm and fire emoji, and an immediate call to buy;
+- 20,001–25,000 RUB: highly enthusiastic excellent-price alert;
+- 25,001–30,000 RUB: positive good-price alert;
+- 30,001–35,000 RUB: calm notification that the offer fits the agreed limit;
+- above 35,000 RUB: no ordinary alert, only daily-summary comparison.
+
 An alert includes:
 
 - alert level: excellent, good, or acceptable;

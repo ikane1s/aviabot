@@ -43,32 +43,32 @@ def format_offer_alert(
     *,
     thresholds: PriceThresholds = DEFAULT_PRICE_THRESHOLDS,
     timezone: str = "Asia/Novosibirsk",
+    spectacular_price_rub: int = 20_000,
 ) -> str:
-    level = {
-        "excellent": "Отличная цена",
-        "good": "Хорошая цена",
-        "acceptable": "Допустимая цена",
-        "over_budget": "Выше установленного максимума",
-    }[classify_price(offer.price_per_person_rub, thresholds).value]
+    headline, reaction = _alert_reaction(
+        offer.price_per_person_rub,
+        thresholds=thresholds,
+        spectacular_price_rub=spectacular_price_rub,
+    )
     route_type = (
         "единый билет туда-обратно"
         if offer.booking_shape is BookingShape.ROUND_TRIP
         else "два отдельных билета"
     )
     availability = {
-        GroupAvailability.CONFIRMED_FOR_FOUR: "вариант найден для четырёх взрослых",
-        GroupAvailability.ONE_ADULT_ONLY: "цена найдена только для одного взрослого",
-        GroupAvailability.UNKNOWN: "наличие для четырёх пока не подтверждено",
+        GroupAvailability.CONFIRMED_FOR_FOUR: "👥 Вариант найден для четырёх взрослых",
+        GroupAvailability.ONE_ADULT_ONLY: "👤 Цена найдена только для одного взрослого",
+        GroupAvailability.UNKNOWN: "👥 Наличие для четырёх пока не подтверждено",
     }[offer.group_availability]
     baggage = {
-        BaggageStatus.INCLUDED: "багаж включён",
-        BaggageStatus.NOT_INCLUDED: "без зарегистрированного багажа",
-        BaggageStatus.UNKNOWN: "багаж нужно проверить",
+        BaggageStatus.INCLUDED: "🧳 багаж включён",
+        BaggageStatus.NOT_INCLUDED: "🎒 без зарегистрированного багажа",
+        BaggageStatus.UNKNOWN: "🧳 багаж нужно проверить",
     }[offer.baggage]
     stops = (
-        "прямые рейсы"
+        "✅ прямые рейсы"
         if offer.is_direct
-        else f"пересадки: туда {offer.outbound.stops}, обратно {offer.inbound.stops}"
+        else f"🔄 пересадки: туда {offer.outbound.stops}, обратно {offer.inbound.stops}"
     )
     verified = (
         _format_time(offer.live_verified_at, timezone)
@@ -76,15 +76,51 @@ def format_offer_alert(
         else "живой проверкой не подтверждено"
     )
     return (
-        f"{level}: {offer.price_per_person_rub:,} ₽ на человека\n"
-        f"Ориентир на четверых: {offer.estimated_total_for_four_rub:,} ₽\n"
-        f"{offer.departure_date:%d.%m.%Y} — {offer.return_date:%d.%m.%Y}, "
+        f"{headline}\n"
+        f"{reaction}\n\n"
+        f"💰 {_rub(offer.price_per_person_rub)} на человека\n"
+        f"💳 Ориентир на четверых: {_rub(offer.estimated_total_for_four_rub)}\n"
+        f"📅 {offer.departure_date:%d.%m.%Y} — {offer.return_date:%d.%m.%Y}, "
         f"{offer.nights} ночей\n"
         f"{route_type}; {stops}; {baggage}\n"
         f"{availability}\n"
-        f"Проверка: {verified}\n"
-        f"{offer.result_url}"
-    ).replace(",", " ")
+        f"🕐 Проверка: {verified}\n\n"
+        "Покупаете отдельно — сначала согласуйте рейс и открывайте вариант одновременно.\n"
+        f"🔗 {offer.result_url}"
+    )
+
+
+def _alert_reaction(
+    price_rub: int,
+    *,
+    thresholds: PriceThresholds,
+    spectacular_price_rub: int,
+) -> tuple[str, str]:
+    if price_rub <= spectacular_price_rub:
+        return (
+            "🚨🚨🚨 СРОЧНО! ОЧЕНЬ ДЕШЁВЫЕ БИЛЕТЫ! 🚨🚨🚨",
+            "🔥🔥🔥 ВСЕМ СКОРЕЕ СМОТРЕТЬ И ПОКУПАТЬ! 🔥🔥🔥",
+        )
+    level = classify_price(price_rub, thresholds)
+    if level.value == "excellent":
+        return (
+            "🔥🔥 ОЧЕНЬ ВЫГОДНАЯ ЦЕНА! 🔥🔥",
+            "Похоже на отличный момент для покупки — лучше проверить скорее.",
+        )
+    if level.value == "good":
+        return (
+            "🔥 Хорошая цена на билеты! 🔥",
+            "Стоит посмотреть этот вариант сегодня.",
+        )
+    if level.value == "acceptable":
+        return (
+            "✈️ Цена в пределах нашего лимита",
+            "Вариант можно рассматривать к покупке.",
+        )
+    return (
+        "ℹ️ Цена выше установленного лимита",
+        "Сохраняем для сравнения в ежедневной сводке.",
+    )
 
 
 def _format_time(value: datetime, timezone: str) -> str:

@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     return_end: date = date(2026, 12, 23)
     travelers: int = 4
 
+    spectacular_price_rub: int = 20_000
     excellent_price_rub: int = 25_000
     good_price_rub: int = 30_000
     maximum_price_rub: int = 35_000

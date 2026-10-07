@@ -176,6 +176,7 @@ async def _send_offer_alerts(
                 offer,
                 thresholds=thresholds,
                 timezone=settings.app_timezone,
+                spectacular_price_rub=settings.spectacular_price_rub,
             ),
         )
         await store.mark_notification_delivered(key, message.message_id)
