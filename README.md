@@ -8,7 +8,7 @@ The preferred trip length is five days, with an accepted range of four to seven 
 
 ## Current status
 
-SQLite persistence, two-hour scheduling, commands, daily summaries, Travelpayouts adapters, round-trip and separate one-way comparison, notification deduplication, and live Aviasales extraction are implemented. A visible Chrome session with a persistent profile loads current result cards; the bot rotates through three date pairs per cycle and verifies attractive dates for four adults. Travelpayouts discovery remains optional and requires an API token.
+SQLite persistence, two-hour scheduling, commands, daily summaries, Travelpayouts adapters, round-trip and separate one-way comparison, notification deduplication, and live Aviasales extraction are implemented. A visible Chrome session with a persistent profile loads current result cards; the bot rotates through three date pairs per cycle and verifies attractive dates for four adults. The Aviasales hot-tickets page is checked every six hours as a discovery hint, and every candidate must still pass an ordinary live search before an alert. Travelpayouts discovery remains optional and requires an API token.
 
 ## Quick start
 

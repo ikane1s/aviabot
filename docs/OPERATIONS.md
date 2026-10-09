@@ -29,6 +29,7 @@ Keep secrets in a root-readable service environment file or another host secret 
 
 - latest completed cycle;
 - latest successful Travelpayouts request;
+- latest Aviasales hot-ticket discovery run;
 - latest successful live browser verification;
 - whether a CAPTCHA cooldown is active;
 - latest successful Telegram delivery;
@@ -43,6 +44,10 @@ Send one service warning, record diagnostic metadata without cookies, pause brow
 ### Aviasales page changed
 
 The verifier should fail closed: do not extract guessed values. Capture a screenshot and sanitized diagnostics locally, then update the isolated provider selectors.
+
+The hot-ticket discovery failure is non-fatal: the normal three-pair live rotation
+continues. Its latest status appears in `/status`, and detailed outcomes use the
+`aviasales_hot_tickets` source in the `search_runs` table.
 
 ### Price changes during checkout
 

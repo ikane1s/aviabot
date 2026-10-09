@@ -3,7 +3,12 @@ from datetime import UTC, date, datetime
 import pytest
 
 from flight_price_bot.domain.models import BaggageStatus, GroupAvailability
-from flight_price_bot.providers.aviasales import build_search_url, parse_ticket_card
+from flight_price_bot.providers.aviasales import (
+    build_hot_tickets_url,
+    build_search_url,
+    parse_hot_ticket_candidate,
+    parse_ticket_card,
+)
 
 DIRECT_CARD = """Самый дешёвый
 144 968 ₽
@@ -51,6 +56,26 @@ def test_search_url_rejects_impossible_return() -> None:
             return_date=date(2026, 12, 16),
             adults=4,
         )
+
+
+def test_hot_ticket_link_extracts_first_price_and_round_trip_dates() -> None:
+    candidate = parse_hot_ticket_candidate(
+        href=(
+            "https://www.aviasales.ru/search/OVB1412EVN20121"
+            "?expected_price=31305&utm_source=explore-hot_tickets"
+        ),
+        text="31\u202f305 ₽ 40\u202f132 ₽",
+        origin="OVB",
+        destination="EVN",
+        departure_year=2026,
+    )
+
+    assert build_hot_tickets_url(origin="OVB", destination="EVN") == (
+        "https://www.aviasales.ru/hottickets/ovb/evn"
+    )
+    assert candidate.departure == date(2026, 12, 14)
+    assert candidate.return_date == date(2026, 12, 20)
+    assert candidate.price_per_person_rub == 31_305
 
 
 def test_parse_four_adult_card_normalizes_total_to_per_person() -> None:

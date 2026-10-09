@@ -4,6 +4,11 @@
 
 The default cycle runs every two hours. It may be reduced to one hour after observing stable site behavior.
 
+Every six hours at most, the cycle also reads the Aviasales hot-tickets page for the
+configured route, month, and round-trip mode. It uses this page only to prioritize
+one date pair that already satisfies the configured date and price limits. The normal
+Aviasales results page must verify the candidate before an alert can be sent.
+
 For every valid departure/return pair, the system considers:
 
 1. Round-trip results for one adult.

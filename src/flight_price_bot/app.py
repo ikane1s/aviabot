@@ -65,12 +65,14 @@ def build_router(settings: Settings, store: SQLiteStore, cycle: SearchCycle) -> 
         if not allowed(message):
             return
         cached = await store.latest_run("travelpayouts")
+        hot_tickets = await store.latest_run("aviasales_hot_tickets")
         live = await store.latest_run("aviasales_browser")
         observations = await store.count_offer_observations()
         await message.answer(
             "Мониторинг запущен.\n"
             f"Наблюдений в базе: {observations}.\n"
             f"Travelpayouts: {_run_status(cached)}.\n"
+            f"Горящие билеты: {_run_status(hot_tickets)}.\n"
             f"Aviasales: {_run_status(live)}."
         )
 

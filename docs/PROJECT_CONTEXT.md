@@ -1,6 +1,6 @@
 # Project context
 
-Last updated: 7 October 2026.
+Last updated: 9 October 2026.
 
 ## Goal
 
@@ -42,6 +42,8 @@ The bot checks both one adult and four adults:
 ## Source policy
 
 - Travelpayouts Data API is a discovery source based on cached searches.
+- The Aviasales hot-tickets page is another discovery source. Its displayed price is
+  a hint only and never triggers an alert by itself.
 - Aviasales browser search is the live verification source.
 - A live result can still change during checkout. Notifications are signals to verify and purchase, not price guarantees.
 - CAPTCHA or blocked browser access is an observable health condition. It is not a reason to bypass site protection.
@@ -71,5 +73,17 @@ The bot checks both one adult and four adults:
 - An invisible reCAPTCHA frame exists on successful result pages. It is not treated as a challenge; only the visible Yandex SmartCaptcha surface blocks a run.
 - Live extraction was verified for one and four adults. A four-adult result displays the combined total, which the bot normalizes to a per-person price.
 - A controlled cycle checked three date pairs and stored 29 live offers. The verified 16–21 December direct S7 option was 36,242 RUB per person and therefore above the ordinary alert ceiling.
-- Automated suite: 21 tests passing; Ruff clean.
+- Automated suite: 28 tests passing; Ruff clean.
+
+## Added on 9 October 2026
+
+- The route-specific Aviasales hot-tickets page is checked at most once every six
+  hours with December and round-trip filters.
+- A hot-ticket candidate inside the approved date window and at or below 35,000 RUB
+  may add one priority pair to the next ordinary Aviasales verification.
+- Hot-ticket prices are not stored as live offers and cannot trigger Telegram alerts
+  until the ordinary search page confirms them.
+- A live page check showed a direct 14–20 December option around 31,305 RUB. The
+  current approved departure window starts on 15 December, so this pair remains
+  excluded unless the date window is explicitly widened.
 

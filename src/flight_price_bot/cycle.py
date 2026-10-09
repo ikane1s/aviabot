@@ -8,7 +8,9 @@ from flight_price_bot.domain.models import Offer
 from flight_price_bot.domain.policy import combine_one_way_fares
 from flight_price_bot.domain.search_window import DatePair, generate_date_pairs
 from flight_price_bot.providers.aviasales import (
+    AviasalesHotTicketsProbe,
     AviasalesPageProbe,
+    HotTicketCandidate,
     SearchPageObservation,
     SearchPageStatus,
 )
@@ -25,12 +27,15 @@ class CycleResult:
     live_url: str | None
     live_offers_found: int = 0
     live_offers_saved: int = 0
+    hot_tickets_found: int = 0
+    hot_tickets_status: str = "not_run"
     alert_offers: tuple[Offer, ...] = ()
 
 
 class SearchCycle:
     browser_cooldown = timedelta(hours=24)
     cached_discovery_cooldown = timedelta(hours=6)
+    hot_tickets_cooldown = timedelta(hours=6)
 
     def __init__(self, settings: Settings, store: SQLiteStore) -> None:
         self.settings = settings
@@ -44,7 +49,11 @@ class SearchCycle:
     async def run(self) -> CycleResult:
         async with self._lock:
             cached_found, cached_saved, cached_status = await self._run_cached_discovery()
-            live_observation, live_saved = await self._run_live_probe()
+            hot_candidates, hot_status = await self._run_hot_ticket_discovery()
+            priority_pairs = self._priority_pairs_from_hot_tickets(hot_candidates)
+            live_observation, live_saved = await self._run_live_probe(
+                priority_pairs=priority_pairs
+            )
             alert_offers = tuple(
                 offer
                 for offer in live_observation.offers
@@ -58,6 +67,8 @@ class SearchCycle:
                 live_url=live_observation.final_url or None,
                 live_offers_found=len(live_observation.offers),
                 live_offers_saved=live_saved,
+                hot_tickets_found=len(hot_candidates),
+                hot_tickets_status=hot_status,
                 alert_offers=alert_offers,
             )
 
@@ -156,7 +167,72 @@ class SearchCycle:
             )
         return found, saved, status
 
-    async def _run_live_probe(self) -> tuple[SearchPageObservation, int]:
+    async def _run_hot_ticket_discovery(
+        self,
+    ) -> tuple[tuple[HotTicketCandidate, ...], str]:
+        now = datetime.now(UTC)
+        browser_next_attempt = await self.store.get_state("browser_next_attempt_at")
+        if browser_next_attempt and datetime.fromisoformat(browser_next_attempt) > now:
+            return (), "browser_cooldown"
+        next_attempt = await self.store.get_state("hot_tickets_next_attempt_at")
+        if next_attempt and datetime.fromisoformat(next_attempt) > now:
+            return (), "cooldown"
+
+        started_at = now
+        probe = AviasalesHotTicketsProbe(
+            Path("data/browser-profile"),
+            headless=self.settings.headless_browser,
+        )
+        try:
+            observation = await probe.inspect(
+                origin=self.settings.origin,
+                destination=self.settings.destination,
+                departure_month=self.settings.departure_start,
+            )
+        except Exception as error:
+            await self.store.record_search_run(
+                source="aviasales_hot_tickets",
+                status="error",
+                started_at=started_at,
+                detail=type(error).__name__,
+            )
+            return (), "error"
+
+        await self.store.record_search_run(
+            source="aviasales_hot_tickets",
+            status=observation.status.value,
+            started_at=started_at,
+            detail=f"{len(observation.candidates)} candidates; {observation.final_url}"[:500],
+        )
+        if observation.status is SearchPageStatus.CHALLENGE:
+            await self.store.set_state(
+                "browser_next_attempt_at", (now + self.browser_cooldown).isoformat()
+            )
+        elif observation.status is SearchPageStatus.READY:
+            await self.store.set_state(
+                "hot_tickets_next_attempt_at",
+                (now + self.hot_tickets_cooldown).isoformat(),
+            )
+        return observation.candidates, observation.status.value
+
+    def _priority_pairs_from_hot_tickets(
+        self, candidates: tuple[HotTicketCandidate, ...]
+    ) -> tuple[DatePair, ...]:
+        approved = {
+            (pair.departure, pair.return_date): pair for pair in self.date_pairs()
+        }
+        matching = [
+            (candidate.price_per_person_rub, approved[key])
+            for candidate in candidates
+            if candidate.price_per_person_rub <= self.settings.maximum_price_rub
+            if (key := (candidate.departure, candidate.return_date)) in approved
+        ]
+        matching.sort(key=lambda item: item[0])
+        return tuple(pair for _, pair in matching[:1])
+
+    async def _run_live_probe(
+        self, *, priority_pairs: tuple[DatePair, ...] = ()
+    ) -> tuple[SearchPageObservation, int]:
         next_attempt_raw = await self.store.get_state("browser_next_attempt_at")
         now = datetime.now(UTC)
         if next_attempt_raw and datetime.fromisoformat(next_attempt_raw) > now:
@@ -172,10 +248,12 @@ class SearchCycle:
         pairs = self.date_pairs()
         cursor_raw = await self.store.get_state("browser_pair_cursor")
         cursor = int(cursor_raw or "0") % len(pairs)
-        selected_pairs = [
+        rotating_pairs = [
             pairs[(cursor + offset) % len(pairs)]
             for offset in range(min(self.settings.live_pairs_per_cycle, len(pairs)))
         ]
+        selected_pairs = list(priority_pairs)
+        selected_pairs.extend(pair for pair in rotating_pairs if pair not in selected_pairs)
         started_at = datetime.now(UTC)
         probe = AviasalesPageProbe(
             Path("data/browser-profile"),
@@ -232,7 +310,7 @@ class SearchCycle:
 
             await self.store.set_state(
                 "browser_pair_cursor",
-                str((cursor + len(selected_pairs)) % len(pairs)),
+                str((cursor + len(rotating_pairs)) % len(pairs)),
             )
             if not observations:
                 detail = "; ".join(failures) or "no observations"

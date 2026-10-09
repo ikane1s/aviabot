@@ -20,9 +20,24 @@ from flight_price_bot.domain.models import (
 
 CHALLENGE_MARKERS = ("smartcaptcha.cloud.yandex.ru/advanced",)
 PRICE_RE = re.compile(r"^(\d[\d ]*)\s*₽$")
+HOT_TICKET_PRICE_RE = re.compile(r"(\d[\d\s\u00a0\u202f]*)\s*₽")
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 AIRLINE_RE = re.compile(r"/([A-Z0-9]{2})@", re.IGNORECASE)
 AIRPORT_TIMEZONES = {"OVB": "Asia/Novosibirsk", "EVN": "Asia/Yerevan"}
+RU_MONTH_NAMES = (
+    "январь",
+    "февраль",
+    "март",
+    "апрель",
+    "май",
+    "июнь",
+    "июль",
+    "август",
+    "сентябрь",
+    "октябрь",
+    "ноябрь",
+    "декабрь",
+)
 
 
 class SearchPageStatus(StrEnum):
@@ -43,6 +58,23 @@ class SearchPageObservation:
     offers: tuple[Offer, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class HotTicketCandidate:
+    departure: date
+    return_date: date
+    price_per_person_rub: int
+    result_url: str
+
+
+@dataclass(frozen=True, slots=True)
+class HotTicketsObservation:
+    status: SearchPageStatus
+    requested_url: str
+    final_url: str
+    title: str
+    candidates: tuple[HotTicketCandidate, ...] = ()
+
+
 def build_search_url(
     *, origin: str, destination: str, departure: date, return_date: date, adults: int
 ) -> str:
@@ -52,6 +84,40 @@ def build_search_url(
         raise ValueError("return date must follow departure date")
     route = f"{origin.upper()}{departure:%d%m}{destination.upper()}{return_date:%d%m}{adults}"
     return f"https://www.aviasales.ru/search/{route}"
+
+
+def build_hot_tickets_url(*, origin: str, destination: str) -> str:
+    return (
+        "https://www.aviasales.ru/hottickets/"
+        f"{origin.lower()}/{destination.lower()}"
+    )
+
+
+def parse_hot_ticket_candidate(
+    *, href: str, text: str, origin: str, destination: str, departure_year: int
+) -> HotTicketCandidate:
+    route_re = re.compile(
+        rf"/search/{re.escape(origin.upper())}(\d{{2}})(\d{{2}})"
+        rf"{re.escape(destination.upper())}(\d{{2}})(\d{{2}})[1-9]",
+        re.IGNORECASE,
+    )
+    route = route_re.search(href)
+    price = HOT_TICKET_PRICE_RE.search(text)
+    if route is None or price is None:
+        raise ValueError("hot-ticket link does not contain a round-trip route and price")
+
+    departure = date(departure_year, int(route.group(2)), int(route.group(1)))
+    return_year = departure_year + int(int(route.group(4)) < departure.month)
+    return_date = date(return_year, int(route.group(4)), int(route.group(3)))
+    if return_date <= departure:
+        raise ValueError("hot-ticket return date must follow departure date")
+    price_rub = int(re.sub(r"\D", "", price.group(1)))
+    return HotTicketCandidate(
+        departure=departure,
+        return_date=return_date,
+        price_per_person_rub=price_rub,
+        result_url=href,
+    )
 
 
 def parse_ticket_card(
@@ -353,3 +419,129 @@ class AviasalesPageProbe:
             finally:
                 with suppress(Exception):
                     await context.close()
+
+
+class AviasalesHotTicketsProbe:
+    def __init__(
+        self, profile_dir: Path, *, headless: bool = False, channel: str = "chrome"
+    ) -> None:
+        self.profile_dir = profile_dir
+        self.headless = headless
+        self.channel = channel
+
+    async def inspect(
+        self,
+        *,
+        origin: str,
+        destination: str,
+        departure_month: date,
+    ) -> HotTicketsObservation:
+        url = build_hot_tickets_url(origin=origin, destination=destination)
+        self.profile_dir.mkdir(parents=True, exist_ok=True)
+
+        async with async_playwright() as playwright:
+            context = await playwright.chromium.launch_persistent_context(
+                str(self.profile_dir),
+                channel=self.channel,
+                headless=self.headless,
+                args=[
+                    "--disable-dev-shm-usage",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-background-networking",
+                ],
+                locale="ru-RU",
+                timezone_id="Asia/Novosibirsk",
+                viewport={"width": 1440, "height": 1000},
+            )
+            try:
+                page = context.pages[0] if context.pages else await context.new_page()
+                navigation_failed = False
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+                    # The filter bar appears after the first batch of cards has loaded.
+                    await page.locator(
+                        '[data-test-id="hot-tickets-month-picker-chip-button"]'
+                    ).wait_for(timeout=20_000)
+                    await self._select_filters(page, departure_month)
+                    route_prefix = f"/search/{origin.upper()}"
+                    await page.locator(f'a[href*="{route_prefix}"]').first.wait_for(
+                        timeout=35_000
+                    )
+                    await page.wait_for_timeout(2_000)
+                except PlaywrightTimeoutError:
+                    navigation_failed = True
+
+                frame_urls = " ".join(frame.url.lower() for frame in page.frames)
+                challenge = any(marker in frame_urls for marker in CHALLENGE_MARKERS)
+                raw_links = await page.locator(
+                    f'a[href*="/search/{origin.upper()}"]'
+                ).evaluate_all(
+                    """
+                    links => links.map(link => ({
+                      href: link.href || '',
+                      text: (link.innerText || '').trim()
+                    }))
+                    """
+                )
+                candidates: list[HotTicketCandidate] = []
+                seen: set[tuple[date, date]] = set()
+                for link in raw_links:
+                    try:
+                        candidate = parse_hot_ticket_candidate(
+                            href=link["href"],
+                            text=link["text"],
+                            origin=origin,
+                            destination=destination,
+                            departure_year=departure_month.year,
+                        )
+                    except ValueError:
+                        continue
+                    key = (candidate.departure, candidate.return_date)
+                    if candidate.departure.month != departure_month.month or key in seen:
+                        continue
+                    seen.add(key)
+                    candidates.append(candidate)
+
+                if challenge and not candidates:
+                    status = SearchPageStatus.CHALLENGE
+                elif candidates:
+                    status = SearchPageStatus.READY
+                elif navigation_failed:
+                    status = SearchPageStatus.NAVIGATION_ERROR
+                else:
+                    status = SearchPageStatus.EMPTY_OR_LOADING
+                return HotTicketsObservation(
+                    status=status,
+                    requested_url=url,
+                    final_url=page.url,
+                    title=await page.title(),
+                    candidates=tuple(
+                        sorted(candidates, key=lambda item: item.price_per_person_rub)
+                    ),
+                )
+            finally:
+                with suppress(Exception):
+                    await context.close()
+
+    async def _select_filters(self, page: object, departure_month: date) -> None:
+        month_name = RU_MONTH_NAMES[departure_month.month - 1]
+        await page.locator(
+            '[data-test-id="hot-tickets-month-picker-chip-button"]'
+        ).click()
+        target_month = page.get_by_role(
+            "button",
+            name=re.compile(
+                rf"^{month_name}\s+{departure_month.year}$", re.IGNORECASE
+            ),
+        )
+        await target_month.click(timeout=10_000)
+
+        trip_button = page.locator(
+            '[data-test-id="hot-tickets-trip-type-chip-button"]'
+        )
+        if "одну" in (await trip_button.inner_text()).lower():
+            await trip_button.click()
+            await page.get_by_text(
+                re.compile(r"^туда.?обратно$", re.IGNORECASE), exact=True
+            ).last.click(timeout=10_000)

@@ -10,8 +10,8 @@ Scheduler / Telegram commands
             v
       Search orchestrator
        /             \
-Travelpayouts       Aviasales browser
-discovery           live verification
+Travelpayouts +     Aviasales browser
+hot-ticket hints    live verification
        \             /
         Normalizer + policy engine
                   |
@@ -40,6 +40,14 @@ Uses Playwright with visible Google Chrome and a persistent local profile. Headl
 
 The verifier must detect consent dialogs, empty results, navigation failures, and CAPTCHA pages. It must not attempt protection bypass. Selectors belong only in this provider so UI changes do not affect domain logic.
 
+### Aviasales hot-ticket discovery
+
+The route-specific hot-tickets page is opened no more than once every six hours. The
+provider selects the configured month and round-trip mode, then extracts the first
+displayed price and dates from ordinary search links. These values are discovery
+hints, not live offers. Only a candidate already inside the approved date window and
+under the notification ceiling can add one extra priority pair to live verification.
+
 ### Domain policy engine
 
 Normalizes round trips and paired one-way offers. It classifies price level, convenience, baggage state, and group availability. It produces separate views for cheapest overall, best direct, best one-stop, best with baggage, and best confirmed for four.
@@ -67,10 +75,12 @@ the gateway isolated from the public Internet and does not change Aviasales beha
 
 Running every date and passenger combination through a browser would be wasteful. Each cycle uses two stages:
 
-1. Discovery ranks cached candidates and recent known combinations.
-2. Live verification checks three rotating date pairs. When a one-adult price is at or below 35,000 RUB, the same dates are checked for four adults.
+1. Discovery ranks cached candidates, hot-ticket hints, and recent known combinations.
+2. Live verification checks three rotating date pairs. A qualifying hot-ticket hint
+   may add one distinct priority pair once per six-hour discovery window. When a
+   one-adult price is at or below 35,000 RUB, the same dates are checked for four adults.
 
-The 14 approved combinations are covered in about five cycles. With the current two-hour interval, a complete rotation takes roughly ten hours even without Travelpayouts data.
+The 12 approved combinations are covered in four cycles. With the current two-hour interval, a complete rotation takes roughly eight hours even without discovery data.
 
 ## Resource target
 

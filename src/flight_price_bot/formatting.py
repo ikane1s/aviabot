@@ -29,10 +29,21 @@ def format_cycle_result(result: CycleResult) -> str:
         "empty_or_loading": "выдача не загрузилась",
         "navigation_error": "ошибка браузера",
     }.get(result.live_status, result.live_status)
+    hot_tickets = {
+        "ready": "работают",
+        "challenge": "SmartCaptcha",
+        "empty_or_loading": "ничего не найдено",
+        "navigation_error": "ошибка браузера",
+        "error": "ошибка",
+        "cooldown": "используется недавняя подборка",
+        "browser_cooldown": "ожидают возобновления браузера",
+        "not_run": "ещё не проверялись",
+    }.get(result.hot_tickets_status, result.hot_tickets_status)
     return (
         "Проверка завершена.\n"
         f"Travelpayouts: {cached}; найдено {result.cached_offers_found}, "
         f"новых наблюдений {result.cached_offers_saved}.\n"
+        f"Горящие билеты: {hot_tickets}; подсказок {result.hot_tickets_found}.\n"
         f"Aviasales: {live}; найдено {result.live_offers_found}, "
         f"новых наблюдений {result.live_offers_saved}."
     )

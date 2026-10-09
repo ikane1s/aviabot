@@ -6,7 +6,11 @@ import pytest
 
 from flight_price_bot.cycle import SearchCycle
 from flight_price_bot.domain.search_window import generate_date_pairs
-from flight_price_bot.providers.aviasales import SearchPageObservation, SearchPageStatus
+from flight_price_bot.providers.aviasales import (
+    HotTicketCandidate,
+    SearchPageObservation,
+    SearchPageStatus,
+)
 
 
 def test_approved_window_has_twelve_combinations_for_four_to_seven_days() -> None:
@@ -98,4 +102,46 @@ async def test_one_failed_pair_does_not_abort_remaining_pairs(
     assert store.state["browser_pair_cursor"] == "3"
     assert store.runs[-1]["status"] == "ready"
     assert "failed=1" in str(store.runs[-1]["detail"])
+
+
+def test_hot_ticket_prioritization_keeps_only_approved_cheap_pair() -> None:
+    settings = SimpleNamespace(
+        departure_start=date(2026, 12, 15),
+        departure_end=date(2026, 12, 18),
+        return_start=date(2026, 12, 20),
+        return_end=date(2026, 12, 23),
+        concert_date=date(2026, 12, 19),
+        minimum_trip_days=4,
+        maximum_trip_days=7,
+        preferred_trip_days=5,
+        maximum_price_rub=35_000,
+    )
+    candidates = (
+        HotTicketCandidate(
+            departure=date(2026, 12, 14),
+            return_date=date(2026, 12, 20),
+            price_per_person_rub=31_305,
+            result_url="https://example.test/outside-window",
+        ),
+        HotTicketCandidate(
+            departure=date(2026, 12, 15),
+            return_date=date(2026, 12, 20),
+            price_per_person_rub=32_000,
+            result_url="https://example.test/approved",
+        ),
+        HotTicketCandidate(
+            departure=date(2026, 12, 16),
+            return_date=date(2026, 12, 21),
+            price_per_person_rub=36_000,
+            result_url="https://example.test/too-expensive",
+        ),
+    )
+
+    priority = SearchCycle(settings, FakeStore())._priority_pairs_from_hot_tickets(
+        candidates
+    )
+
+    assert [(pair.departure, pair.return_date) for pair in priority] == [
+        (date(2026, 12, 15), date(2026, 12, 20))
+    ]
 

@@ -10,6 +10,7 @@ playwright/.auth/
 data/*.db
 data/*.db-*
 data/browser-profile/
+data/hot-*-profile/
 logs/
 artifacts/*
 !artifacts/.gitkeep
