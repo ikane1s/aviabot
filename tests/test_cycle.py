@@ -13,9 +13,9 @@ from flight_price_bot.providers.aviasales import (
 )
 
 
-def test_approved_window_has_twelve_combinations_for_four_to_seven_days() -> None:
+def test_approved_window_has_fourteen_combinations_for_four_to_seven_days() -> None:
     pairs = generate_date_pairs(
-        departure_start=date(2026, 12, 15),
+        departure_start=date(2026, 12, 14),
         departure_end=date(2026, 12, 18),
         return_start=date(2026, 12, 20),
         return_end=date(2026, 12, 23),
@@ -24,7 +24,7 @@ def test_approved_window_has_twelve_combinations_for_four_to_seven_days() -> Non
         max_nights=7,
     )
 
-    assert len(pairs) == 12
+    assert len(pairs) == 14
     assert min(pair.nights for pair in pairs) == 4
     assert max(pair.nights for pair in pairs) == 7
 
@@ -76,7 +76,7 @@ async def test_one_failed_pair_does_not_abort_remaining_pairs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = SimpleNamespace(
-        departure_start=date(2026, 12, 15),
+        departure_start=date(2026, 12, 14),
         departure_end=date(2026, 12, 18),
         return_start=date(2026, 12, 20),
         return_end=date(2026, 12, 23),
@@ -106,7 +106,7 @@ async def test_one_failed_pair_does_not_abort_remaining_pairs(
 
 def test_hot_ticket_prioritization_keeps_only_approved_cheap_pair() -> None:
     settings = SimpleNamespace(
-        departure_start=date(2026, 12, 15),
+        departure_start=date(2026, 12, 14),
         departure_end=date(2026, 12, 18),
         return_start=date(2026, 12, 20),
         return_end=date(2026, 12, 23),
@@ -121,7 +121,7 @@ def test_hot_ticket_prioritization_keeps_only_approved_cheap_pair() -> None:
             departure=date(2026, 12, 14),
             return_date=date(2026, 12, 20),
             price_per_person_rub=31_305,
-            result_url="https://example.test/outside-window",
+            result_url="https://example.test/approved-hot-ticket",
         ),
         HotTicketCandidate(
             departure=date(2026, 12, 15),
@@ -142,6 +142,6 @@ def test_hot_ticket_prioritization_keeps_only_approved_cheap_pair() -> None:
     )
 
     assert [(pair.departure, pair.return_date) for pair in priority] == [
-        (date(2026, 12, 15), date(2026, 12, 20))
+        (date(2026, 12, 14), date(2026, 12, 20))
     ]
 

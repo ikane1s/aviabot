@@ -11,7 +11,7 @@ Help four friends find inexpensive flights from Novosibirsk to Yerevan for a con
 - Origin: Novosibirsk, city/airport code `OVB`.
 - Destination: Yerevan, city/airport code `EVN`.
 - Concert: 19 December 2026.
-- Initial departure window: 15–18 December 2026.
+- Departure window: 14–18 December 2026.
 - Initial return window: 20–23 December 2026.
 - Preferred stay: five days; 4–7 days is acceptable.
 - Travelers: four adults.
@@ -84,6 +84,6 @@ The bot checks both one adult and four adults:
 - Hot-ticket prices are not stored as live offers and cannot trigger Telegram alerts
   until the ordinary search page confirms them.
 - A live page check showed a direct 14–20 December option around 31,305 RUB. The
-  current approved departure window starts on 15 December, so this pair remains
-  excluded unless the date window is explicitly widened.
+  approved departure window was widened to 14 December so this pair can receive a
+  live verification.
 

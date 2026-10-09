@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     origin: str = "OVB"
     destination: str = "EVN"
     concert_date: date = date(2026, 12, 19)
-    departure_start: date = date(2026, 12, 15)
+    departure_start: date = date(2026, 12, 14)
     departure_end: date = date(2026, 12, 18)
     return_start: date = date(2026, 12, 20)
     return_end: date = date(2026, 12, 23)

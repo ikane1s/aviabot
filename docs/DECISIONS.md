@@ -34,7 +34,7 @@ Headless browser runs received Yandex SmartCaptcha, while visible installed Chro
 
 ## 2026-10-07 — Rotating live coverage
 
-Check three of the 12 valid date pairs per two-hour cycle. Query one adult first and repeat dates at or below the 35,000 RUB threshold for four adults. Aviasales displays a combined four-person total, so normalize it to a per-person price before comparison and notification.
+Check three of the 14 valid date pairs per two-hour cycle. Query one adult first and repeat dates at or below the 35,000 RUB threshold for four adults. Aviasales displays a combined four-person total, so normalize it to a per-person price before comparison and notification.
 
 ## 2026-10-08 — Telegram through a restricted SSH tunnel
 
@@ -49,3 +49,9 @@ Read the Aviasales hot-tickets page at most once every six hours and use a quali
 result to prioritize one ordinary search. Do not save its displayed price as a live
 offer or alert from it directly because availability and price can be stale by the
 time the linked result page opens.
+
+## 2026-10-09 — Departure window includes 14 December
+
+Widen the departure window from 15–18 December to 14–18 December. This admits the
+direct 14–20 December hot-ticket candidate, keeps the stay within six days, and still
+places the 19 December concert near the end of the trip.

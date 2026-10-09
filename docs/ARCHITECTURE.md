@@ -80,7 +80,7 @@ Running every date and passenger combination through a browser would be wasteful
    may add one distinct priority pair once per six-hour discovery window. When a
    one-adult price is at or below 35,000 RUB, the same dates are checked for four adults.
 
-The 12 approved combinations are covered in four cycles. With the current two-hour interval, a complete rotation takes roughly eight hours even without discovery data.
+The 14 approved combinations are covered in about five cycles. With the current two-hour interval, a complete rotation takes roughly ten hours even without discovery data.
 
 ## Resource target
 
